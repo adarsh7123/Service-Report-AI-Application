@@ -22,7 +22,10 @@ app = Flask(__name__)
 # CORS configuration
 CORS(app, resources={
     r"/*": {
-        "origins": "http://localhost:5173",
+        "origins": [
+            "http://localhost:5173",
+            "https://service-report-ai-application.vercel.app"  # Your Vercel domain
+        ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }

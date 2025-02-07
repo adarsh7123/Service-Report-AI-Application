@@ -5,5 +5,34 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.8.0 
+      - key: OPENAI_API_KEY
+        value: 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
+      - key: SMTP_SERVER
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USERNAME
+        value: 12th.gseb.army@gmail.com
+      - key: SMTP_PASSWORD
+        value: qolfrwmrerdihfsd
+      - key: TECH1_USER
+        value: tech1
+      - key: TECH1_PASS
+        value: tech123
+      - key: TECH2_USER
+        value: tech2
+      - key: TECH2_PASS
+        value: tech456
+      - key: TECH3_USER
+        value: tech3
+      - key: TECH3_PASS
+        value: tech789
+      - key: TECH4_USER
+        value: tech4
+      - key: TECH4_PASS
+        value: tech321
+      - key: TECH5_USER
+        value: tech5
+      - key: TECH5_PASS
+        value: tech555
+       
