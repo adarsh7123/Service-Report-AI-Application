@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://repair-service-backend.onrender.com/api'
+  : 'http://localhost:5000/api';
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
