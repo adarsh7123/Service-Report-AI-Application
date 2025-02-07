@@ -31,8 +31,8 @@ CORS(app, resources={
     }
 })
 
-# OpenAI client initialization - simpler version
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) # It will automatically use OPENAI_API_KEY from environment variables
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Test OpenAI connection at startup
 try:
