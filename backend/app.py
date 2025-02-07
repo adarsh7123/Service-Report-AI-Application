@@ -63,7 +63,10 @@ def login():
     }
     
     if username in valid_credentials and valid_credentials[username] == password:
-        return jsonify({"success": True})
+        # Generate a token (for simplicity, using username as token)
+        token = f"token_for_{username}"  # Replace with actual token generation logic
+        return jsonify({"success": True, "token": token})
+    
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 @app.route('/api/send-report', methods=['POST'])
@@ -92,7 +95,7 @@ def send_report():
             elif ('good' in description or 
                   'working' in description or 
                   'no issues' in description):
-                good_condition_items.append(f"• {repair.get('issueDescription')}")
+                good_condition_items.append(repair.get('issueDescription', ''))
 
         # Create email content using the common function
         email_content = create_email_content(repair_items, good_condition_items, additional_info)
@@ -112,7 +115,8 @@ def send_report():
         
         return jsonify({
             "success": True,
-            "message": "Report sent successfully"
+            "good_condition_items": good_condition_items,
+            "repair_items": repair_items
         })
 
     except Exception as e:
@@ -253,91 +257,40 @@ def transcribe_audio():
 
 @app.route('/api/generate-table', methods=['POST'])
 def generate_table():
+    data = request.get_json()
+    transcript = data.get('transcript', '')
+
+    if not transcript:
+        return jsonify({"success": False, "error": "No transcript provided"}), 400
+
     try:
-        data = request.get_json()
-        transcript = data.get('transcript', '')
-        
-        print(f"Received transcript: {transcript}")  # Debug log
-        
-        # First, translate to English if needed
-        translation_prompt = f"""
-        Translate this text to English if it's not in English. If it's already in English, return it unchanged:
-        {transcript}
-        """
-        
+        # Translate the transcript to English if needed
         translation_response = client.chat.completions.create(
-            model="gpt-4",  # Changed back to GPT-4
+            model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a translator. Translate to English if needed."},
-                {"role": "user", "content": translation_prompt}
+                {"role": "system", "content": "You are a translator. Translate this text to English."},
+                {"role": "user", "content": transcript}
             ]
         )
-        
-        english_text = translation_response.choices[0].message.content.strip()
-        print(f"English translation: {english_text}")  # Debug log
-        
-        # Generate repair table with structured prompt
-        table_prompt = f"""
-        Create a repair report based on this text: {english_text}
+        english_transcript = translation_response.choices[0].message.content.strip()
 
-        Format your response as a JSON object with this structure:
-        {{
-            "repairs": [
-                {{
-                    "issueDescription": "Clear description of the issue",
-                    "requiredParts": "Parts needed for repair",
-                    "estimatedTime": "Estimated repair time",
-                    "priorityLevel": "High/Medium/Low",
-                    "recommendedAction": "Steps to fix the issue"
-                }}
-            ],
-            "good_condition_items": ["item1", "item2"]
-        }}
+        # Generate repair items from the English transcript
+        repair_items = []
+        for line in english_transcript.split('\n'):
+            if line.strip():  # Only process non-empty lines
+                repair_items.append({
+                    "issueDescription": line.strip(),
+                    "requiredParts": "Battery",  # Example placeholder
+                    "estimatedTime": "1 hour",  # Example placeholder
+                    "priorityLevel": "High",  # Example placeholder
+                    "recommendedAction": "Replace the battery"  # Example placeholder
+                })
 
-        Ensure all items mentioned as "in good condition" or "working fine" are included in the good_condition_items array.
-        """
-        
-        table_response = client.chat.completions.create(
-            model="gpt-4",  # Changed back to GPT-4
-            messages=[
-                {"role": "system", "content": "You are a repair technician creating detailed repair reports in JSON format."},
-                {"role": "user", "content": table_prompt}
-            ]
-        )
-        
-        # Parse the response
-        response_content = table_response.choices[0].message.content.strip()
-        print(f"GPT Response: {response_content}")  # Debug log
-        
-        try:
-            repair_data = json.loads(response_content)
-            
-            # Extract good condition items if present
-            good_condition_items = repair_data.get('good_condition_items', [])
-            other_content = "\n".join(f"• {item}" for item in good_condition_items) if good_condition_items else ""
-            
-            return jsonify({
-                "repair_table": {
-                    "repairs": repair_data.get('repairs', [])
-                },
-                "other_content": other_content,
-                "success": True
-            })
-            
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {str(e)}")
-            print(f"Failed to parse: {response_content}")
-            return jsonify({
-                "error": "Failed to parse repair table",
-                "details": str(e)
-            }), 500
+        return jsonify({"success": True, "repair_table": {"repairs": repair_items}})
 
     except Exception as e:
-        print(f"Error generating table: {str(e)}")
-        return jsonify({
-            "error": str(e),
-            "message": "Failed to generate repair table"
-        }), 500
+        print(f"Error generating repair table: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/translate', methods=['POST'])
 def translate():

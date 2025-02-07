@@ -17,7 +17,11 @@ function Login() {
       });
       
       if (response.data.success) {
+        const token = response.data.token;
+        localStorage.setItem('token', token);
         navigate('/report');
+      } else {
+        setError('Invalid credentials');
       }
     } catch (err) {
       setError('Invalid credentials');

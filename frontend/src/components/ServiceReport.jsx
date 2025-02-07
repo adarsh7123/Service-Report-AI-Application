@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { api } from '../services/api';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000';
 
@@ -32,6 +32,7 @@ function ServiceReport() {
   const [emailPreview, setEmailPreview] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window) {
@@ -232,15 +233,17 @@ function ServiceReport() {
     setIsTranslating(false);
   };
 
-  const generateRepairList = async (transcriptText) => {
+  const generateRepairList = async (transcript) => {
     try {
-      const response = await axios.post(`${API_URL}/api/generate-repair-list`, {
-        transcript: transcriptText,
-        precontext,
-      });
-      setRepairList(response.data.repair_list.split('\n'));
+        const response = await api.generateTable({ transcript });
+        if (response.success) {
+            setRepairList(response.repair_table.repairs);
+        } else {
+            throw new Error(response.error || 'Failed to generate repair table');
+        }
     } catch (error) {
-      console.error('Error generating repair list:', error);
+        console.error('Error generating repair table:', error);
+        setError('Error generating repair table: ' + error.message);
     }
   };
 
@@ -341,326 +344,337 @@ function ServiceReport() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Remove token from local storage
+    navigate('/'); // Redirect to login page
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/" />;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Service Report</h1>
       
-            {/* Service Context Section - KEEP THIS ONE */}
-      <div className="mb-6">
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">Recipient Email:</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-2 border rounded"
-                        placeholder="Enter recipient email"
-        />
-      </div>
-                <div>
-                    <label className="block text-sm font-medium mb-2">Service Context:</label>
-        <textarea
-          value={precontext}
-          onChange={(e) => setPrecontext(e.target.value)}
-                        className="w-full p-4 border rounded-lg"
-                        rows="5"
-                        placeholder="Enter service context, protocols followed, and general notes..."
-        />
-                </div>
-      </div>
-
-            {/* Voice Recording Section */}
-      <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4">Voice Recording (Speak in any language)</h2>
-                {/* Recording Button */}
-        <button
-          className={`${
-                        isRecording 
-                        ? 'bg-red-500 hover:bg-red-600' 
-                        : 'bg-blue-500 hover:bg-blue-600'
-                    } text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 flex items-center gap-2`}
-          onClick={isRecording ? stopRecording : startRecording}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <>
-                            <span className="animate-pulse">●</span> Processing...
-                        </>
-                    ) : (
-                        <>
-                            {isRecording ? (
-                                <>
-                                    <span className="animate-pulse">●</span> Stop Recording
-                                </>
-                            ) : (
-                                <>
-                                    <span>⚫</span> Start Recording
-                                </>
-                            )}
-                        </>
-                    )}
+      <div className="max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold">Service Report</h1>
+        <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition">
+          Logout
         </button>
+      </div>
+        
+        {/* Service Context Section - KEEP THIS ONE */}
+        <div className="mb-6">
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Recipient Email:</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Enter recipient email"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Service Context:</label>
+            <textarea
+              value={precontext}
+              onChange={(e) => setPrecontext(e.target.value)}
+              className="w-full p-4 border rounded-lg"
+              rows="5"
+              placeholder="Enter service context, protocols followed, and general notes..."
+            />
+          </div>
+        </div>
 
-                {/* Audio Playback Section */}
-                {audioURL && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Recorded Audio
-                        </label>
-                        <audio 
-                            ref={audioRef}
-                            src={audioURL} 
-                            controls 
-                            className="w-full"
-                        />
-                    </div>
+        {/* Voice Recording Section */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Voice Recording (Speak in any language)</h2>
+          {/* Recording Button */}
+          <button
+            className={`${
+              isRecording 
+              ? 'bg-red-500 hover:bg-red-600' 
+              : 'bg-blue-500 hover:bg-blue-600'
+            } text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 flex items-center gap-2`}
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="animate-pulse">●</span> Processing...
+              </>
+            ) : (
+              <>
+                {isRecording ? (
+                  <>
+                    <span className="animate-pulse">●</span> Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <span>⚫</span> Start Recording
+                  </>
                 )}
+              </>
+            )}
+          </button>
 
-                {/* Real-time Speech Display */}
-                <div className="mt-4 space-y-4">
-                    {/* Current Word Display */}
-                    {isListening && (
-                        <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Currently Speaking
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <span className="animate-pulse text-blue-500">●</span>
-                                <p className="text-blue-600 text-lg font-medium">
-                                    {currentWord || 'Listening...'}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Original Speech */}
-                    {originalTranscript && (
-                        <div className="space-y-2 mt-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Original Speech
-                            </label>
-                            <textarea
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                rows="3"
-                                value={originalTranscript}
-                                readOnly
-                            />
-      </div>
-                    )}
-
-                    {/* English Translation */}
-                    {transcript && (
-                        <div className="space-y-2 mt-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-                                English Translation
-        </label>
-        <textarea
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                rows="3"
-          value={transcript}
-          readOnly
-        />
-                        </div>
-                    )}
-
-                    {/* Audio Recording */}
-                    {audioURL && (
-                        <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Recorded Audio
-                            </label>
-                            <audio 
-                                ref={audioRef}
-                                src={audioURL} 
-                                controls 
-                                className="w-full"
-                            />
-                        </div>
-                    )}
-                </div>
-      </div>
-
-      {/* Repair List Section */}
-            <div className="space-y-2">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Repair List
-        </label>
-                <div className="space-y-2">
-          {repairList.map((item, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                            <span className="text-gray-500 min-w-[2rem]">{index + 1}.</span>
-              <input
-                type="text"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={item}
-                onChange={(e) => {
-                  const newList = [...repairList];
-                  newList[index] = e.target.value;
-                  setRepairList(newList);
-                }}
+          {/* Audio Playback Section */}
+          {audioURL && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Recorded Audio
+              </label>
+              <audio 
+                ref={audioRef}
+                src={audioURL} 
+                controls 
+                className="w-full"
               />
-              <button
-                                className="text-red-500 hover:text-red-700 p-2"
-                onClick={() => {
-                  const newList = repairList.filter((_, i) => i !== index);
-                  setRepairList(newList);
-                }}
-              >
-                ×
-              </button>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
 
-            {/* Repair Details Section */}
-            {repairDetails.length > 0 && (
-                <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-4">Repair Details</h2>
-                    <div className="space-y-4">
-                        {repairDetails.map((repair, index) => (
-                            <div key={index} className="border rounded-lg p-4 bg-white">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold">Issue {index + 1}</h3>
-                                    <button
-                                        onClick={() => deleteRepairDetail(index)}
-                                        className="text-red-500 hover:text-red-700"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label className="block text-sm font-medium">Description:</label>
-                                        <input
-                                            type="text"
-                                            value={repair.issueDescription}
-                                            onChange={(e) => updateRepairDetail(index, 'issueDescription', e.target.value)}
-                                            className="w-full p-2 border rounded"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium">Required Parts:</label>
-                                        <input
-                                            type="text"
-                                            value={repair.requiredParts}
-                                            onChange={(e) => updateRepairDetail(index, 'requiredParts', e.target.value)}
-                                            className="w-full p-2 border rounded"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium">Estimated Time:</label>
-                                        <input
-                                            type="text"
-                                            value={repair.estimatedTime}
-                                            onChange={(e) => updateRepairDetail(index, 'estimatedTime', e.target.value)}
-                                            className="w-full p-2 border rounded"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium">Priority Level:</label>
-                                        <select
-                                            value={repair.priorityLevel}
-                                            onChange={(e) => updateRepairDetail(index, 'priorityLevel', e.target.value)}
-                                            className="w-full p-2 border rounded"
-                                        >
-                                            <option value="High">High</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="Low">Low</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium">Recommended Action:</label>
-                                        <textarea
-                                            value={repair.recommendedAction}
-                                            onChange={(e) => updateRepairDetail(index, 'recommendedAction', e.target.value)}
-                                            className="w-full p-2 border rounded"
-                                            rows="2"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+          {/* Real-time Speech Display */}
+          <div className="mt-4 space-y-4">
+            {/* Current Word Display */}
+            {isListening && (
+              <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Currently Speaking
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="animate-pulse text-blue-500">●</span>
+                  <p className="text-blue-600 text-lg font-medium">
+                    {currentWord || 'Listening...'}
+                  </p>
                 </div>
+              </div>
             )}
 
-            {/* Additional Information Section */}
-            <div className="mt-6">
-                <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
-        <textarea
-                    value={additionalInfo}
-                    onChange={(e) => setAdditionalInfo(e.target.value)}
-                    className="w-full p-4 border rounded-lg"
-          rows="4"
-                    placeholder="General observations and non-repair information..."
-        />
-      </div>
+            {/* Original Speech */}
+            {originalTranscript && (
+              <div className="space-y-2 mt-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Original Speech
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  rows="3"
+                  value={originalTranscript}
+                  readOnly
+                />
+              </div>
+            )}
 
-            {/* Preview and Submit Buttons */}
-            <div className="flex gap-4 mt-6">
+            {/* English Translation */}
+            {transcript && (
+              <div className="space-y-2 mt-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  English Translation
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  rows="3"
+                  value={transcript}
+                  readOnly
+                />
+              </div>
+            )}
+
+            {/* Audio Recording */}
+            {audioURL && (
+              <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Recorded Audio
+                </label>
+                <audio 
+                  ref={audioRef}
+                  src={audioURL} 
+                  controls 
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Repair List Section */}
+        <div className="space-y-2">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Repair List
+          </label>
+          <div className="space-y-2">
+            {repairList.map((item, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-gray-500 min-w-[2rem]">{index + 1}.</span>
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={item}
+                  onChange={(e) => {
+                    const newList = [...repairList];
+                    newList[index] = e.target.value;
+                    setRepairList(newList);
+                  }}
+                />
                 <button
-                    className="flex-1 py-2 px-4 rounded-md text-white font-medium bg-blue-500 hover:bg-blue-600"
-                    onClick={generatePreview}
-                    disabled={loading}
+                  className="text-red-500 hover:text-red-700 p-2"
+                  onClick={() => {
+                    const newList = repairList.filter((_, i) => i !== index);
+                    setRepairList(newList);
+                  }}
                 >
-                    Preview Report
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Repair Details Section */}
+        {repairDetails.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-4">Repair Details</h2>
+            <div className="space-y-4">
+              {repairDetails.map((repair, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-white">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold">Issue {index + 1}</h3>
+                    <button
+                      onClick={() => deleteRepairDetail(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-sm font-medium">Description:</label>
+                      <input
+                        type="text"
+                        value={repair.issueDescription}
+                        onChange={(e) => updateRepairDetail(index, 'issueDescription', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Required Parts:</label>
+                      <input
+                        type="text"
+                        value={repair.requiredParts}
+                        onChange={(e) => updateRepairDetail(index, 'requiredParts', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Estimated Time:</label>
+                      <input
+                        type="text"
+                        value={repair.estimatedTime}
+                        onChange={(e) => updateRepairDetail(index, 'estimatedTime', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Priority Level:</label>
+                      <select
+                        value={repair.priorityLevel}
+                        onChange={(e) => updateRepairDetail(index, 'priorityLevel', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Recommended Action:</label>
+                      <textarea
+                        value={repair.recommendedAction}
+                        onChange={(e) => updateRepairDetail(index, 'recommendedAction', e.target.value)}
+                        className="w-full p-2 border rounded"
+                        rows="2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional Information Section */}
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
+          <textarea
+            value={additionalInfo}
+            onChange={(e) => setAdditionalInfo(e.target.value)}
+            className="w-full p-4 border border-gray-300 rounded-lg"
+            rows="4"
+            placeholder="Please provide any general observations or non-repair information in English..."
+          />
+        </div>
+
+        {/* Preview and Submit Buttons */}
+        <div className="flex gap-4 mt-6">
+          <button
+            className="flex-1 py-2 px-4 rounded-md text-white font-medium bg-blue-500 hover:bg-blue-600"
+            onClick={generatePreview}
+            disabled={loading}
+          >
+            Preview Report
+          </button>
+          <button
+            className={`flex-1 py-2 px-4 rounded-md text-white font-medium
+              ${loading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'}`}
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Processing...' : 'Send Report'}
+          </button>
+        </div>
+
+        {/* Email Preview Modal */}
+        {showPreview && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Email Preview</h2>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="whitespace-pre-wrap font-mono text-sm border p-4 rounded-lg bg-gray-50">
+                {emailPreview}
+              </div>
+              <div className="flex justify-end gap-4 mt-4">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-4 py-2 rounded-md border hover:bg-gray-50"
+                >
+                  Edit
                 </button>
                 <button
-                    className={`flex-1 py-2 px-4 rounded-md text-white font-medium
-                        ${loading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'}`}
-                    onClick={handleSubmit}
-                    disabled={loading}
+                  onClick={handleSubmit}
+                  className="px-4 py-2 rounded-md bg-green-500 text-white hover:bg-green-600"
                 >
-                    {loading ? 'Processing...' : 'Send Report'}
+                  Send Email
                 </button>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Email Preview Modal */}
-            {showPreview && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">Email Preview</h2>
-                            <button
-                                onClick={() => setShowPreview(false)}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="whitespace-pre-wrap font-mono text-sm border p-4 rounded-lg bg-gray-50">
-                            {emailPreview}
-                        </div>
-                        <div className="flex justify-end gap-4 mt-4">
-                            <button
-                                onClick={() => setShowPreview(false)}
-                                className="px-4 py-2 rounded-md border hover:bg-gray-50"
-                            >
-                                Edit
-                            </button>
-      <button
-        onClick={handleSubmit}
-                                className="px-4 py-2 rounded-md bg-green-500 text-white hover:bg-green-600"
-      >
-                                Send Email
-      </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                    {error}
-                </div>
-            )}
-        </div>
+        {error && (
+          <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
