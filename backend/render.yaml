@@ -6,33 +6,33 @@ services:
     startCommand: gunicorn app:app
     envVars:
       - key: OPENAI_API_KEY
-        value: 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
+        value: # Remove the actual key
       - key: SMTP_SERVER
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: 587
       - key: SMTP_USERNAME
-        value: 12th.gseb.army@gmail.com
+        value: # Remove the actual key
       - key: SMTP_PASSWORD
-        value: qolfrwmrerdihfsd
+        value: # Remove the actual key
       - key: TECH1_USER
-        value: tech1
+        value: # Remove the actual key
       - key: TECH1_PASS
-        value: tech123
+        value: # Remove the actual key
       - key: TECH2_USER
-        value: tech2
+        value: # Remove the actual key
       - key: TECH2_PASS
-        value: tech456
+        value: # Remove the actual key
       - key: TECH3_USER
-        value: tech3
+        value: # Remove the actual key
       - key: TECH3_PASS
-        value: tech789
+        value: # Remove the actual key
       - key: TECH4_USER
-        value: tech4
+        value: # Remove the actual key
       - key: TECH4_PASS
-        value: tech321
+        value: # Remove the actual key
       - key: TECH5_USER
-        value: tech5
+        value: # Remove the actual key
       - key: TECH5_PASS
-        value: tech555
+        value: # Remove the actual key
        

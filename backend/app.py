@@ -41,6 +41,10 @@ try:
 except Exception as e:
     print("OpenAI connection failed:", str(e))
 
+@app.route('/')
+def index():
+    return jsonify({"message": "Welcome to the Repair Service API. Use /api/login, /api/send-report, etc."})
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
