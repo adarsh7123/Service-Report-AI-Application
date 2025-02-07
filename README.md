@@ -222,3 +222,38 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 💬 Support
 
 For support, please [open an issue](https://github.com/adarsh7123/Service-Report-Application/issues) in the GitHub repository or contact the maintainers.
+
+# Repair Service Application
+
+A full-stack application for managing repair service reports.
+
+## Features
+- Voice recording and transcription
+- Multi-language support
+- Automated repair report generation
+- Email notifications
+
+## Tech Stack
+- Frontend: React, Vite, TailwindCSS
+- Backend: Flask, OpenAI
+- Deployment: Render.com (Backend), Vercel (Frontend)
+
+## Local Development
+1. Clone the repository
+2. Backend setup:
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # or venv\Scripts\activate on Windows
+   pip install -r requirements.txt
+   python app.py
+   ```
+3. Frontend setup:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+## Environment Variables
+Create .env files in both backend and frontend directories.
