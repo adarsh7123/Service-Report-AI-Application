@@ -51,6 +51,8 @@ def login():
     username = data.get('username')
     password = data.get('password')
     
+    print(f"Attempting login with username: {username} and password: {password}")  # Debug log
+    
     # Check credentials against environment variables
     valid_credentials = {
         os.getenv('TECH1_USER'): os.getenv('TECH1_PASS'),

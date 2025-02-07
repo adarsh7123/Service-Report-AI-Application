@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { api } from '../services/api';
+import { Navigate } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000';
 
@@ -30,6 +31,7 @@ function ServiceReport() {
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [emailPreview, setEmailPreview] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window) {
@@ -81,6 +83,14 @@ function ServiceReport() {
     };
     
     testAPI();
+  }, []);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsAuthenticated(false); // User is not authenticated
+    }
   }, []);
 
   const handleSpeechResult = async (event) => {
@@ -330,6 +340,10 @@ function ServiceReport() {
         setError('Failed to generate preview: ' + err.message);
     }
   };
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
