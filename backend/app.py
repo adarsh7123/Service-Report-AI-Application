@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os
 from dotenv import load_dotenv
 from openai import OpenAI
+import os
 import tempfile
 import json
 import smtplib
@@ -32,7 +32,7 @@ CORS(app, resources={
 })
 
 # OpenAI client initialization - simpler version
-client = OpenAI()  # It will automatically use OPENAI_API_KEY from environment variables
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) # It will automatically use OPENAI_API_KEY from environment variables
 
 # Test OpenAI connection at startup
 try:
