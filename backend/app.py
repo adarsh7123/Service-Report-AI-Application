@@ -24,12 +24,13 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:5173",
-            "https://service-report-ai-application.vercel.app"  # Your Vercel domain
+            "https://service-report-ai-application.vercel.app"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Authorization"]  # Add "Authorization" here
     }
 })
+
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -264,33 +265,107 @@ def generate_table():
         return jsonify({"success": False, "error": "No transcript provided"}), 400
 
     try:
-        # Translate the transcript to English if needed
+        
+        
+        print(f"Received transcript: {transcript}")  # Debug log
+        
+        # First, translate to English if needed
+        translation_prompt = f"""
+        Translate this text to English if it's not in English:
+        {transcript}
+        """
+        
         translation_response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a translator. Translate this text to English."},
-                {"role": "user", "content": transcript}
+                {"role": "system", "content": "You are a translator. Translate to English if needed."},
+                {"role": "user", "content": translation_prompt}
             ]
         )
-        english_transcript = translation_response.choices[0].message.content.strip()
+        
+        english_text = translation_response.choices[0].message.content.strip()
+        print(f"English translation: {english_text}")  # Debug log
+        
+        # Separate items needing repair from items in good condition
+        separation_prompt = f"""
+        Analyze this text and separate items into two categories:
+        1. Items needing repair
+        2. Items in good condition
+        
+        Text: {english_text}
+        
+        Format the response as a JSON object with this exact structure:
+        {{
+            "repair_items": ["item1 not working", "item2 broken", ...],
+            "good_condition_items": ["item1 is working fine", "item2 in good condition", ...]
+        }}
+        """
+        
+        separation_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an analyzer separating items by their condition."},
+                {"role": "user", "content": separation_prompt}
+            ]
+        )
+        
+        items_dict = json.loads(separation_response.choices[0].message.content)
+        
+        # Generate repair table for items needing repair
+        if items_dict["repair_items"]:
+            table_prompt = f"""
+            Create a repair table based on these issues:
+            {', '.join(items_dict["repair_items"])}
 
-        # Generate repair items from the English transcript
-        repair_items = []
-        for line in english_transcript.split('\n'):
-            if line.strip():  # Only process non-empty lines
-                repair_items.append({
-                    "issueDescription": line.strip(),
-                    "requiredParts": "Battery",  # Example placeholder
-                    "estimatedTime": "1 hour",  # Example placeholder
-                    "priorityLevel": "High",  # Example placeholder
-                    "recommendedAction": "Replace the battery"  # Example placeholder
-                })
+            Format the response as a JSON object with this exact structure:
+            {{
+                "repairs": [
+                    {{
+                        "issueDescription": "Detailed description of the issue",
+                        "requiredParts": "List of required parts",
+                        "estimatedTime": "Estimated repair time",
+                        "priorityLevel": "High/Medium/Low",
+                        "recommendedAction": "Specific steps to fix"
+                    }}
+                ]
+            }}
+            """
+            
+            table_response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a repair technician creating detailed repair reports."},
+                    {"role": "user", "content": table_prompt}
+                ]
+            )
+            
+            repair_table = json.loads(table_response.choices[0].message.content)
+        else:
+            repair_table = {"repairs": []}
+        
+        # Format good condition items for additional notes
+        other_content = ""
+        if items_dict["good_condition_items"]:
+            other_content = "\n".join(f"• {item}" for item in items_dict["good_condition_items"])
+        
+        return jsonify({
+            "repair_table": repair_table,
+            "other_content": other_content,
+            "success": True
+        })
 
-        return jsonify({"success": True, "repair_table": {"repairs": repair_items}})
-
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {str(e)}")
+        return jsonify({
+            "error": "Failed to parse repair table",
+            "details": str(e)
+        }), 500
     except Exception as e:
-        print(f"Error generating repair table: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        print(f"Error generating table: {str(e)}")
+        return jsonify({
+            "error": str(e),
+            "message": "Failed to generate repair table"
+        }), 500
 
 @app.route('/api/translate', methods=['POST'])
 def translate():
