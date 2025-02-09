@@ -105,7 +105,7 @@ def send_report():
         msg = MIMEMultipart()
         msg['From'] = f"xyz team <{os.getenv('SMTP_USERNAME')}>"
         msg['To'] = recipient_email
-        msg['Subject'] = f'Machine Repair Service Report - {datetime.datetime.now().strftime("%B %d, %Y")}'
+        msg['Subject'] = f'Repair Service Report - {datetime.datetime.now().strftime("%B %d, %Y")}'
         msg.attach(MIMEText(email_content, 'plain'))
         
         # Send email

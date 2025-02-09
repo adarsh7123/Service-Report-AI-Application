@@ -6,7 +6,7 @@ function App() {
         <div className="min-h-screen bg-gray-100 py-6">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-center mb-8">
-                    Machine Repair Service
+                    Repair Service Report
                 </h1>
                 <RepairForm />
             </div>
